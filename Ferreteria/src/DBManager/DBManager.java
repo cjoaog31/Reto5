@@ -25,7 +25,7 @@ public class DBManager
     private static final int port = 3306;
     private static final String database = "mysql";
     private static final String uid = "root";
-    private static final String pwd = "Ju@n3lt0p0311";
+    private static final String pwd = "";
     
     private static final String prodDB = "ferreteria";
     
