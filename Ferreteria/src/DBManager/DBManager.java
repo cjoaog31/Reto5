@@ -41,7 +41,8 @@ public class DBManager
     private static final String configFile = "config.xml";
     
     private static final String TABLE_CREATION_FORMAT = "CREATE TABLE ? ( ? );";
-    private static final String CONSTRAINT_CREATION_FORMAT = "";
+    private static final String CONSTRAINT_FOREIGN_CREATION_FORMAT = "ALTER TABLE ? ADD CONSTRAINT FOREIGN KEY(?) REFERENCES ?(?)";
+    private static final String INSERT_FORMAT = "INSERT INTO ?(?) VALUES(?)";
     private static final String AUTO_INCREMENT = "auto_increment";
     private static final String PRIMARY_KEY = "primary key";
 
@@ -238,9 +239,39 @@ public class DBManager
                            String isNull = columna.getElementsByTagName("null").item(0).getTextContent();
                            boolean primary = false;
                            boolean foreign = false;
+                           String foreignKeyData = "";
                            boolean autoIncrement = false;
                            
-                           NodeList primaryList = null;
+                           //Si cuenta con un nodo primary asume que la columna es una primary key
+                           NodeList primaryList = columna.getElementsByTagName("primary");
+                           if (primaryList.getLength() > 0) primary = true;
+                           
+                           //Si cuenta con un nodo auto_increment asume que la columna es auto incrementable
+                           NodeList autoIncrementList = columna.getElementsByTagName("auto_increment");
+                           if (autoIncrementList.getLength() > 0) autoIncrement = true;
+                           
+                           
+                           //Si cuenta con un nodo auto_increment asume que la columna es auto incrementable
+                           NodeList foreignList = columna.getElementsByTagName("foreign");
+                           if (foreignList.getLength() > 0) {
+                               foreign = true;
+                               
+                               String referencedColumn = foreignList.item(0).getAttributes().getNamedItem("referencedColumn").getTextContent();
+                               String referencedTable = foreignList.item(0).getAttributes().getNamedItem("referencedTable").getTextContent();
+                        
+                               foreignKeyData += nombreTabla + "," + nombre + "," + referencedTable + "," + referencedColumn;
+                               constraints.add(foreignKeyData);
+                           }
+                           
+                           //Si cuenta con valores predeterminados
+                           NodeList valoresList = columna.getElementsByTagName("valores");
+                           if (foreignList.getLength() > 0) {
+                               
+                               
+                           }
+                           
+                           
+                           
                        }
                    }
                   
