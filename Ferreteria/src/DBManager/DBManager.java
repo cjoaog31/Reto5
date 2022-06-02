@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,7 +40,10 @@ public class DBManager
     private String connectionString;
     private static final String configFile = "config.xml";
     
-    private static final String TABLE_CREATION_FORMAT = "";
+    private static final String TABLE_CREATION_FORMAT = "CREATE TABLE ? ( ? );";
+    private static final String CONSTRAINT_CREATION_FORMAT = "";
+    private static final String AUTO_INCREMENT = "auto_increment";
+    private static final String PRIMARY_KEY = "primary key";
 
     /**
      * Constructor del DB Manager
@@ -118,8 +122,6 @@ public class DBManager
                   this.prodDB = prodDB;
 
             }
-            
-            
             
         } 
         catch (Exception e) 
@@ -209,10 +211,37 @@ public class DBManager
                        throw new Exception("El archivo de configuracion no cuenta con la estructura de tablas necesaria");
                    }
                    
+                   //Arreglo donde se guardan los constraints
+                   ArrayList<String> constraints = new ArrayList<String>();
+                   
                    for (int i = 0; i < tamanioTablas; i++) 
                    {
                        Element tabla = (Element) tablas.item(i);
                        
+                       //Nombre de la tabla que se está evaluando
+                       String nombreTabla = tabla.getElementsByTagName("name").item(0).getTextContent();
+                       
+                       //Lista de columnas
+                       NodeList columnas = tabla.getElementsByTagName(port);
+                       int tamanioColumnas = columnas.getLength();
+                       if (tamanioTablas == 0)
+                       {
+                           throw new Exception("La tabla: " + nombreTabla + " no tiene columnas en el archivo de configuracion");
+                       }
+                       
+                       for (int j = 0; j < tamanioColumnas; j++) 
+                       {
+                           Element columna = (Element) columnas.item(0);
+                           
+                           String nombre = columna.getElementsByTagName("nombre").item(0).getTextContent();
+                           String tipoDato = columna.getElementsByTagName("tipDato").item(0).getTextContent();
+                           String isNull = columna.getElementsByTagName("null").item(0).getTextContent();
+                           boolean primary = false;
+                           boolean foreign = false;
+                           boolean autoIncrement = false;
+                           
+                           NodeList primaryList = null;
+                       }
                    }
                   
                   System.out.println("DBManager.DBManager.inicializarDBPrimeraVez()");
