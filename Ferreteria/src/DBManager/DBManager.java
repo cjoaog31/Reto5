@@ -28,7 +28,7 @@ import org.w3c.dom.NodeList;
 public class DBManager 
 {
     private String server;
-    private int port;
+    private String port;
     private String database;
     private String uid;
     private String pwd;
@@ -38,12 +38,23 @@ public class DBManager
     private Connection connection;
     private String connectionString;
     private static final String configFile = "config.xml";
+    
+    private static final String TABLE_CREATION_FORMAT = "";
 
+    /**
+     * Constructor del DB Manager
+     * Se encarga de crear la conexion a la base de datos leyendo el archivo de configuracion, en caso de que la base de datos inicial no exista crea la base de datos y cada una de las tablas necesarias 
+     * estipuladas en el archivo de configuracion
+     * @throws Exception 
+     * 
+     */
     public DBManager() throws Exception
     {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         
         try {
+            
+            // Se encarga de leer el archivo XML
             dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             
             DocumentBuilder db = dbf.newDocumentBuilder();
@@ -53,22 +64,25 @@ public class DBManager
             
             if(!doc.getDocumentElement().getNodeName().equals("config"))
             {
+                //Arroja exception en caso de que el archivo no tenga un segmento config el cual es parte de la estructura base
                 throw new Exception("El archivo de configuracion no esta bien estructurado");
             }
             
+            //Nombre del nodo que contiene la informacion de la base de datos
             NodeList atributosDB = doc.getElementsByTagName("DBInitialConnection");
             int tamResultado = atributosDB.getLength();
             if (tamResultado == 0) {
                 throw new Exception("No se encontró el segmento de configuracion de la base de datos");
             }
             
+            //Se espera que solo exista un item con este nombre, en caso de existir más de uno solo se procesa el primero
             Node configuracion = atributosDB.item(0);
             
             if (configuracion.getNodeType() == Node.ELEMENT_NODE) {
 
                   Element element = (Element) configuracion;
 
-                  // get staff's attribute
+                  // Se obtienen los atributos basicos de la base de datos
                   String server = element.getElementsByTagName("server").item(0).getTextContent();
                   String motor = element.getElementsByTagName("motor").item(0).getTextContent();
                   String port = element.getElementsByTagName("port").item(0).getTextContent();
@@ -76,19 +90,46 @@ public class DBManager
                   String uid = element.getElementsByTagName("uid").item(0).getTextContent();
                   String pwd = element.getElementsByTagName("pwd").item(0).getTextContent();
                   
+                  //Se inicializan los atributos de la clase
                   this.server = server;
                   this.motor = motor;
-                  this.port = Integer.getInteger(port);
+                  this.port = port;
                   this.database = database;
                   this.uid = uid;
                   this.pwd = pwd;
-              }
+            }
+            
+            NodeList atributosDBProd = doc.getElementsByTagName("DBProd");
+            int tamResultado2 = atributosDBProd.getLength();
+            if (tamResultado2 == 0) {
+                throw new Exception("No se encontró el segmento de configuracion de la base de datos productiva");
+            }
+            
+            //Se espera que solo exista un item con este nombre, en caso de existir más de uno solo se procesa el primero
+            Node nodoBaseDeDatos = atributosDBProd.item(0);
+            
+            if (nodoBaseDeDatos.getNodeType() == Node.ELEMENT_NODE) {
+
+                  Element element = (Element) nodoBaseDeDatos;
+
+                  // Se obtiene el nombre de la base de datos productiva
+                  String prodDB = element.getElementsByTagName("database").item(0).getTextContent();
+                  //Se inicializa el atributo
+                  this.prodDB = prodDB;
+
+            }
+            
+            
+            
         } 
         catch (Exception e) 
         {
             System.out.println(e);
         }
+        
+        //Se inicializa la conexion nula mientras se hace la validacion
         this.connection = null;
+        
         if(motor.equalsIgnoreCase("mysql"))
         {
             this.connectionString = "jdbc:mysql://" + server + ":" + port + "/" + database;
@@ -97,28 +138,30 @@ public class DBManager
         {
             throw new Exception("Por el momento no se soporta un motor distinto a mysql");
         }
+        
         inicializar();
     }
     
-    public void inicializar()
+    private void inicializar()
     {
         try 
         {
             this.connection = DriverManager.getConnection(this.connectionString, uid, pwd);
             boolean valid = this.connection.isValid(50000);
-            
+            System.out.println(valid);
             if (valid)
             {
                 String DBExists = "show databases like '" + prodDB + "';";
+                System.out.println(DBExists);
                 Statement DB = this.connection.createStatement();
                 ResultSet executed = DB.executeQuery(DBExists);
                 if (executed.next())
                 {
-                    String dbExistance = executed.getString(1);
-                    if (!dbExistance.equalsIgnoreCase(prodDB)) 
-                    {
-                        inicializarEstructura();
-                    }
+                    //TODO
+                }
+                else
+                {
+                    inicializarDBPrimeraVez();
                 }
             }
             else
@@ -129,14 +172,58 @@ public class DBManager
         } 
         catch (Exception e) 
         {
-            System.out.println(e.getLocalizedMessage());
+            System.out.println(e);
         }
     }
     
-    private void inicializarEstructura()
+    private void inicializarDBPrimeraVez()
     {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         
+        try {
+            
+            // Se encarga de leer el archivo XML
+            dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(new File(System.getProperty("user.dir")+"/src/DBManager/"+configFile));
+            
+            doc.getDocumentElement().normalize();
+            
+          
+            //Nombre del nodo que contiene la informacion de la base de datos productiva
+            NodeList atributosDB = doc.getElementsByTagName("DBProd");
+            //Se espera que solo exista un item con este nombre, en caso de existir más de uno solo se procesa el primero
+            Node configuracion = atributosDB.item(0);
+            
+            if (configuracion.getNodeType() == Node.ELEMENT_NODE) {
+
+                  Element element = (Element) configuracion;
+
+                  // Se obtiene el nombre que se quiere usar para la base de datos
+                   NodeList tablas = element.getElementsByTagName("tables");
+                   int tamanioTablas = tablas.getLength();
+                   
+                   if (tamanioTablas == 0)
+                   {
+                       throw new Exception("El archivo de configuracion no cuenta con la estructura de tablas necesaria");
+                   }
+                   
+                   for (int i = 0; i < tamanioTablas; i++) 
+                   {
+                       Element tabla = (Element) tablas.item(i);
+                       
+                   }
+                  
+                  System.out.println("DBManager.DBManager.inicializarDBPrimeraVez()");
+            }
+        } 
+        catch (Exception e) 
+        {
+            System.out.println(e);
+        }
     }
+    
     
     
     
