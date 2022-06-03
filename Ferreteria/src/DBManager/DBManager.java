@@ -4,6 +4,7 @@
  */
 package DBManager;
 
+import ferreteria.Ferreteria;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,9 +12,13 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,6 +44,7 @@ public class DBManager
     private Connection connection;
     private String connectionString;
     private static final String configFile = "config.xml";
+    private Ferreteria ferreteria;
     
     private static final String TABLE_CREATION_FORMAT = "CREATE TABLE ? ( ? );";
     private static final String CONSTRAINT_FOREIGN_CREATION_FORMAT = "ALTER TABLE ? ADD CONSTRAINT FOREIGN KEY(?) REFERENCES ?(?)";
@@ -53,8 +59,9 @@ public class DBManager
      * @throws Exception 
      * 
      */
-    public DBManager() throws Exception
+    public DBManager(Ferreteria ferreteria) throws Exception
     {
+        this.ferreteria = ferreteria;
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         
         try {
@@ -149,34 +156,45 @@ public class DBManager
     {
         try 
         {
-            this.connection = DriverManager.getConnection(this.connectionString, uid, pwd);
-            boolean valid = this.connection.isValid(50000);
-            System.out.println(valid);
-            if (valid)
+            if(this.connection.isClosed() || this.connection == null)
             {
-                String DBExists = "show databases like '" + prodDB + "';";
-                System.out.println(DBExists);
-                Statement DB = this.connection.createStatement();
-                ResultSet executed = DB.executeQuery(DBExists);
-                if (executed.next())
+                this.connection = DriverManager.getConnection(this.connectionString, uid, pwd);
+                boolean valid = this.connection.isValid(50000);
+                System.out.println(valid);
+                if (valid)
                 {
-                    //TODO
+                    String DBExists = "show databases like '" + prodDB + "';";
+                    System.out.println(DBExists);
+                    Statement DB = this.connection.createStatement();
+                    ResultSet executed = DB.executeQuery(DBExists);
+                    if (executed.next())
+                    {
+                        //TODO traer la informacion de la base de datos y cargar el modelo
+                        cargarInformacion();
+                    }
+                    else
+                    {
+                        this.connection.close();
+                        inicializarDBPrimeraVez();
+                    }
                 }
                 else
                 {
-                    inicializarDBPrimeraVez();
+                    throw new Exception("Error inicializando la conexion");
                 }
             }
-            else
-            {
-                throw new Exception("Error inicializando la conexion");
-            }
+            
             
         } 
         catch (Exception e) 
         {
             System.out.println(e);
         }
+    }
+    
+    private void cargarInformacion()
+    {
+        
     }
     
     private void inicializarDBPrimeraVez()
@@ -217,21 +235,25 @@ public class DBManager
                    
                    for (int i = 0; i < tamanioTablas; i++) 
                    {
+                       ArrayList<String> columnasArray = new ArrayList<String>();
+                       
                        Element tabla = (Element) tablas.item(i);
                        
                        //Nombre de la tabla que se está evaluando
                        String nombreTabla = tabla.getElementsByTagName("name").item(0).getTextContent();
                        
                        //Lista de columnas
-                       NodeList columnas = tabla.getElementsByTagName(port);
+                       NodeList columnas = tabla.getElementsByTagName("columna");
                        int tamanioColumnas = columnas.getLength();
                        if (tamanioTablas == 0)
                        {
                            throw new Exception("La tabla: " + nombreTabla + " no tiene columnas en el archivo de configuracion");
                        }
                        
+                       //Obtiene la informacion de las columnas
                        for (int j = 0; j < tamanioColumnas; j++) 
                        {
+                           
                            Element columna = (Element) columnas.item(0);
                            
                            String nombre = columna.getElementsByTagName("nombre").item(0).getTextContent();
@@ -241,6 +263,9 @@ public class DBManager
                            boolean foreign = false;
                            String foreignKeyData = "";
                            boolean autoIncrement = false;
+                           
+                           //Almacena los datos de la columna
+                           String valoresColumna = nombre + "," + tipoDato +"," + isNull;
                            
                            //Si cuenta con un nodo primary asume que la columna es una primary key
                            NodeList primaryList = columna.getElementsByTagName("primary");
@@ -263,16 +288,28 @@ public class DBManager
                                constraints.add(foreignKeyData);
                            }
                            
-                           //Si cuenta con valores predeterminados
-                           NodeList valoresList = columna.getElementsByTagName("valores");
-                           if (foreignList.getLength() > 0) {
-                               
-                               
-                           }
-                           
                            
                            
                        }
+                       
+                       //Si cuenta con valores predeterminados
+                        NodeList valoresList = tabla.getElementsByTagName("valores");
+                        if (valoresList.getLength() > 0) 
+                        {
+                            NodeList valorList = valoresList.item(0).getChildNodes();
+                            int tamanioValor = valorList.getLength();
+
+                            if (tamanioValor > 0) 
+                            {
+                                for (int k = 0; k < tamanioValor; k++) 
+                                {
+                                    Element valor = (Element) valorList;
+
+                                }
+                            }
+
+
+                        }
                    }
                   
                   System.out.println("DBManager.DBManager.inicializarDBPrimeraVez()");
@@ -282,6 +319,26 @@ public class DBManager
         {
             System.out.println(e);
         }
+    }
+
+    public void actualizarNombreFerreteria(String nuevoNombre) 
+    {
+        String sql = "update config set nombre = ?";
+        try
+        {
+            PreparedStatement statement = this.connection.prepareStatement(sql);
+            statement.setString(1, nuevoNombre);
+            int rowsUpdated = statement.executeUpdate();
+            if (rowsUpdated > 0 )
+            {
+                System.out.println("Se actualizó el nombre de la ferreteria");
+            }
+        } 
+        catch (SQLException ex) 
+        {
+            Logger.getLogger(DBManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
     
     
