@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.XMLConstants;
@@ -51,7 +52,7 @@ public class DBManager
     private static final String TABLE_CREATION_FORMAT = "CREATE TABLE %s ( %s );";
     private static final String CREATE_DATABASE_FORMAT = "CREATE DATABASE %s";
     private static final String CONSTRAINT_FOREIGN_CREATION_FORMAT = "ALTER TABLE %s ADD CONSTRAINT FOREIGN KEY(%s) REFERENCES %s(%s)";
-    private static final String INSERT_FORMAT = "INSERT INTO %s(%s) VALUES(?)";
+    private static final String INSERT_FORMAT = "INSERT INTO %s(%s) VALUES(%s)";
     private static final String AUTO_INCREMENT = "auto_increment";
     private static final String PRIMARY_KEY = "primary key";
 
@@ -357,18 +358,14 @@ public class DBManager
                        
                        System.out.println("Termina de iterar las columnas");
                        
-                       
-                       
-                       
-                       System.out.println("Adiciona la definicion de la tabla");
-                       
                        //Si cuenta con valores predeterminados
                         NodeList valoresList = tabla.getElementsByTagName("valores");
+                        
                         if (valoresList.getLength() > 0) 
                         {
                             System.out.println("La tabla " + nombreTabla + " cuenta con valores predeterminados");
                             Element valorElement = (Element) valoresList.item(0);
-                            NodeList valorList = valorElement.getElementsByTagName("value");
+                            NodeList valorList = valorElement.getElementsByTagName("valor");
                             int tamanioValor = valorList.getLength();
                             
                             if (tamanioValor > 0) 
@@ -382,7 +379,7 @@ public class DBManager
                                     
                                     for (String item : columnasArray)
                                     {
-                                        String columna = item.split(",")[0];
+                                        String columna = item.split(" ")[0];
                                         NodeList dato = valor.getElementsByTagName(columna);
                                         
                                         if (dato.getLength() > 0) 
@@ -500,9 +497,73 @@ public class DBManager
                    }
                    
                    /**
-                    * Segmento donde se crean las tablas
+                    * Segmento donde se crean los valores estandar
                     */
                    
+                   System.out.println("Se van a crear los valores predeterminados");
+                   
+                   for (int i = 0; i < valoresPredeterminados.size(); i++)
+                   {
+                       HashMap<String,String> hashmap = valoresPredeterminados.get(i);
+                       int tamanio = hashmap.size();
+                       String[] args = new String[3];
+                       String[] valoresAIngresar = new String[tamanio-1];
+                       args[0] = hashmap.get("tabla");
+                       Set<String> set = hashmap.keySet();
+                       String columnas = "";
+                       String interrogantes = "";
+                       int contador = 0;
+                       int contador2 = 0;
+                       int tamanoSet = set.size();
+                       
+                       for (String string : set)
+                       {
+                           if (contador < tamanoSet-1) 
+                           {
+                               if(!string.equalsIgnoreCase("tabla"))
+                               {
+                                   columnas += string + ",";
+                                   valoresAIngresar[contador2] = hashmap.get(string);
+                                   contador2++;
+                                   interrogantes += "?,";
+                               }
+                           }
+                           else
+                           {
+                               if(!string.equalsIgnoreCase("tabla"))
+                               {
+                                   columnas += string;
+                                   valoresAIngresar[contador2] = hashmap.get(string);
+                                   contador2++;
+                                   interrogantes += "?";
+                               }
+                           }
+                           contador++;
+                       }
+                       
+                       args[1] = columnas;
+                       args[2] = interrogantes;
+                       String insertarValores = String.format(INSERT_FORMAT, args);
+                       
+                       PreparedStatement insercionStatement = this.connection.prepareStatement(insertarValores);
+                       
+                       for (int j = 0; j < valoresAIngresar.length; j++) 
+                       {
+                           insercionStatement.setString(j+1, valoresAIngresar[j]);
+                       }
+                       
+                       int rowsUpdated3 = insercionStatement.executeUpdate();
+                       if (rowsUpdated3 == 0) 
+                       {
+                            throw new Exception("No se pudo agregar un elemeto default");
+                       }
+                       
+                       //String insercionDatos = String.format(INSERT_FORMAT, ));
+                   }
+                   
+                   System.out.println("Se cargan los valores predeterminados");
+                   
+                   this.connection.close();
                    
             }
             else
