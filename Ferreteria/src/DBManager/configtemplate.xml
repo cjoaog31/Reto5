@@ -73,6 +73,12 @@ Click nbfs://nbhost/SystemFileSystem/Templates/XML/XMLDocument.xml to edit this 
                         <foreign referencedColumn= "id" referencedTable = "unidad">true</foreign>
                     </columna>
                     <columna>
+                        <nombre>idcategoria</nombre>
+                        <tipoDato>int</tipoDato>
+                        <null>false</null>
+                        <foreign referencedColumn= "id" referencedTable = "categoria">true</foreign>
+                    </columna>
+                    <columna>
                         <nombre>detalle</nombre>
                         <tipoDato>varchar(250)</tipoDato>
                         <null>false</null>
@@ -181,6 +187,11 @@ Click nbfs://nbhost/SystemFileSystem/Templates/XML/XMLDocument.xml to edit this 
                         <idtipounidad>3</idtipounidad>
                     </valor>
                     <valor>
+                        <nombre>Unidad</nombre>
+                        <unidad>unidad</unidad>
+                        <idtipounidad>3</idtipounidad>
+                    </valor>
+                    <valor>
                         <nombre>Barril</nombre>
                         <unidad>barril</unidad>
                         <idtipounidad>2</idtipounidad>
@@ -197,7 +208,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/XML/XMLDocument.xml to edit this 
                 <columnas>
                     <columna>
                         <nombre>nombre</nombre>
-                        <tipoDato>varcvhar(50)</tipoDato>
+                        <tipoDato>varchar(50)</tipoDato>
                         <null>true</null>
                     </columna>
                     <columna>
