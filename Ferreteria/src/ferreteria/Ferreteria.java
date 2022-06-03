@@ -24,6 +24,7 @@ public class Ferreteria {
         this.nombre = "";
         try 
         {
+            System.out.println("Creando la DBManager");
             this.dbmanager = new DBManager(this);
         } 
         catch (Exception e) 
